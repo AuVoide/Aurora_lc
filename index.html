@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="manifest" href="manifest.json">
+    <title>Aurora OS | Cloud v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg: #050505;
+            --p: #8b5cf6;
+            --a: #06b6d4;
+            --glass: rgba(20, 20, 25, 0.85);
+            --border: rgba(255, 255, 255, 0.1);
+            --font: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: var(--font);
+            touch-action: none;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* BOOT */
+        #boot {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            background: black;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            position: absolute;
+            inset: 0;
+        }
+
+        /* AUTH SCREEN */
+        #auth {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(30px);
+            z-index: 9000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            transition: 0.5s;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #auth.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .auth-card {
+            width: 90%;
+            max-width: 320px;
+            background: rgba(30, 30, 35, 0.6);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 0 50px 100px black;
+        }
+
+        .auth-inp {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .auth-inp:focus {
+            border-color: var(--p);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--p);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .auth-btn:active {
+            transform: scale(0.95);
+            opacity: 0.9;
+        }
+
+        .auth-link {
+            font-size: 0.8rem;
+            color: #aaa;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* DESKTOP */
+        #desktop {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at 50% 120%, #1a1a2e, #000);
+            opacity: 0;
+            transition: 0.8s;
+        }
+
+        .bar {
+            height: 36px;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            z-index: 5000;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        /* GRID */
+        #grid {
+            flex: 1;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+            grid-auto-rows: 110px;
+            gap: 15px;
+            justify-items: center;
+            overflow-y: auto;
+            padding-bottom: 140px;
+        }
+
+        .app {
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .app:active {
+            transform: scale(0.95);
+        }
+
+        .ico {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            transition: 0.2s;
+        }
+
+        .app:hover .ico {
+            border-color: var(--p);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+            transform: translateY(-5px);
+        }
+
+        /* WINDOWS */
+        .win {
+            position: absolute;
+            background: #0f0f0f;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px black;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.2s, transform 0.2s;
+            min-width: 300px;
+            min-height: 200px;
+        }
+
+        .win.open {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .win.active {
+            border-color: var(--p);
+            z-index: 500;
+            box-shadow: 0 0 0 1px var(--p), 0 50px 100px black;
+        }
+
+        .head {
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .head:active {
+            cursor: grabbing;
+        }
+
+        .ctrl {
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ctrl.close:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .body {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+            border-radius: 0 0 12px 12px;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #111;
+            pointer-events: auto;
+        }
+
+        .blocker {
+            position: absolute;
+            inset: 0;
+            display: none;
+        }
+
+        .win.moving .blocker,
+        .win.resizing .blocker {
+            display: block;
+        }
+
+        .resizer {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 30px;
+            height: 30px;
+            cursor: se-resize;
+            z-index: 10;
+            touch-action: none;
+        }
+
+        /* DOCK */
+        #dock {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 70px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 0 15px;
+            z-index: 6000;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .d-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .d-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-10px) scale(1.1);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="boot">
+        <canvas id="waves"></canvas>
+        <div style="z-index:2; text-align:center;">
+            <div style="font-size:3rem; font-weight:700; letter-spacing:5px;">AURORA</div>
+            <div style="font-size:0.8rem; opacity:0.6;">CLOUD v2.0</div>
+        </div>
+    </div>
+
+    <div id="auth" class="active">
+        <div style="font-size:2rem; font-weight:700;">Giriş Yap</div>
+        <div class="auth-card">
+            <!-- Setup box hidden by default unless login fails 3 times -->
+            <div id="setupArea" style="display:none;">
+                <label style="font-size:0.7rem; color:#aaa;">Script URL:</label>
+                <input id="newUrl" class="auth-inp" style="font-size:0.7rem;"
+                    placeholder="https://script.google.com/..."
+                    value="https://script.google.com/macros/s/AKfycbwRTX1QoXuCimsCGQ5Nxnl-af89zXSQrYa0IQezJS1xJCfUpjKiHiNBOcSHxbw7GxlXwg/exec"
+                    onchange="localStorage.setItem('svr',this.value)">
+            </div>
+
+            <input id="uUser" class="auth-inp" placeholder="Kullanıcı Adı">
+            <div style="position:relative;">
+                <input id="uPass" type="password" class="auth-inp" placeholder="Şifre" style="padding-right:30px;">
+                <i data-lucide="eye"
+                    style="position:absolute; right:10px; top:12px; height:15px; width:15px; color:#666; cursor:pointer;"
+                    onmousedown="document.getElementById('uPass').type='text'"
+                    onmouseup="document.getElementById('uPass').type='password'"
+                    ontouchstart="document.getElementById('uPass').type='text'"
+                    ontouchend="document.getElementById('uPass').type='password'"></i>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <input type="checkbox" id="remenber" checked>
+                    <label for="remenber" style="color:#aaa; font-size:0.75rem;">Beni Hatırla</label>
+                </div>
+                <span style="color:#ef4444; font-size:0.7rem; cursor:pointer;"
+                    onclick="localStorage.removeItem('auro_u'); localStorage.removeItem('auro_p'); location.reload();">Kaydı
+                    Sil</span>
+            </div>
+
+            <button id="btnAction" class="auth-btn" onclick="cloud.login()">GİRİŞ YAP</button>
+            <div id="msg" style="color:var(--p); text-align:center; font-size:0.8rem; min-height:1rem; margin-top:5px;">
+            </div>
+
+            <div style="display:flex; justify-content:center; margin-top:10px;">
+                <span class="auth-link" onclick="toggleMode()">Hesap Oluştur</span>
+            </div>
+
+            <div style="margin-top:10px; text-align:center;">
+                <span class="auth-link" style="color:#444;"
+                    onclick="document.getElementById('setupArea').style.display='block'">URL Ayarla (Gelişmiş)</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="desktop">
+        <div class="bar">
+            <span>Aurora OS</span>
+            <span id="clock">12:00</span>
+        </div>
+        <div id="grid"></div>
+        <div id="dock"></div>
+    </div>
+
+    <!-- AI -->
+    <div id="ai"
+        style="position:fixed; bottom:100px; right:20px; width:340px; height:500px; background:#111; border:1px solid #333; border-radius:16px; display:none; flex-direction:column; z-index:9999;">
+        <div
+            style="padding:15px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:bold; color:var(--a);">Aurora Intelligence</span>
+            <i data-lucide="x" class="ctrl" onclick="ui.toggleAI()"></i>
+        </div>
+        <div id="aiOut" style="flex:1; padding:15px; overflow-y:auto; font-size:0.9rem;"></div>
+        <div style="padding:10px;"><input id="aiIn"
+                style="width:100%; padding:10px; background:#222; border:none; color:white; border-radius:8px; outline:none;"
+                placeholder="Ask..." onkeydown="if(event.key=='Enter') ai.send()"></div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const KEY = "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";
+
+        // FINAL HARDCODED URL
+        let SERVER_URL = "https://script.google.com/macros/s/AKfycbwtyntw6FfiBFMi32O-RoNBIGe6RwhLKOeyikwsSokADLXMsc7RPWyPe_L48wSY20vXwg/exec";
+
+        /* --- STATE --- */
+        let USER = localStorage.getItem('auro_u') || null;
+        let PASS = localStorage.getItem('auro_p') || null;
+
+        let STATE = {
+            installed: ['browser', 'ai_web', 'locker', 'graph', 'notes', 'search', 'files', 'store', 'settings'],
+            notes_content: "Bulut Notlarınız buraya geri yüklenecek..."
+        };
+
+        const APPS = {
+            'browser': { t: 'Aurora Browser', i: 'globe', c: '#3b82f6', url: 'https://eyupturnazurna-glitch.github.io/Aurora_taray-c-/' },
+            'ai_web': { t: 'Erdem AI', i: 'sparkles', c: '#10b981', url: 'https://eyupturnazurna-glitch.github.io/erdem_ai.github.io/' },
+            'locker': { t: 'Locker', i: 'lock', c: '#ef4444', url: 'https://eyupturnazurna-glitch.github.io/LOCEKR/' },
+            'graph': { t: 'Graphicer', i: 'bar-chart-2', c: '#8b5cf6', url: 'https://eyupturnazurna-glitch.github.io/Aurora_graph-cer/' },
+            'notes': { t: 'Cloud Notes', i: 'sticky-note', c: '#fdba74', type: 'native_notes' },
+            'search': { t: 'Gizli Sekme', i: 'search', c: '#fff', url: 'https://www.google.com/webhp?igu=1' },
+            'files': { t: 'Dosyalar', i: 'folder', c: '#eab308' },
+            'store': { t: 'Store', i: 'shopping-bag', c: '#f43f5e' },
+            'settings': { t: 'Ayarlar', i: 'settings', c: '#64748b' }
+        };
+
+        /* --- CLOUD ENGINE --- */
+        let isReg = false;
+        function toggleMode() {
+            isReg = !isReg;
+            document.getElementById('btnAction').innerText = isReg ? 'KAYIT OL' : 'GİRİŞ YAP';
+            document.querySelector('.auth-link').innerText = isReg ? 'Giriş Yap' : 'Hesap Oluştur';
+            document.getElementById('msg').innerText = '';
+        }
+
+        const cloud = {
+            async req(action, data = {}) {
+                document.getElementById('msg').innerText = '...';
+                try {
+                    const res = await fetch(SERVER_URL, {
+                        method: 'POST',
+                        redirect: 'follow',
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({ action, user: USER, pass: PASS, ...data })
+                    });
+                    const json = await res.json();
+                    document.getElementById('msg').innerText = '';
+                    return json;
+                } catch (e) {
+                    document.getElementById('msg').innerText = 'Hata: Script URL kontrol edin.';
+                    console.error(e);
+                    return { error: 'Bağlantı Hatası (URL?)' };
+                }
+            },
+
+            async login() {
+                // Ensure we use the hardcoded URL, do NOT fetch old one from storage
+                // SERVER_URL = localStorage.getItem('svr') || SERVER_URL; 
+
+                let u = document.getElementById('uUser').value;
+                let p = document.getElementById('uPass').value;
+
+                if (u) u = u.trim();
+                if (p) p = p.trim();
+
+                if (!u || !p) return document.getElementById('msg').innerText = 'Kullanıcı adı/şifre girin.';
+
+                USER = u; PASS = p;
+
+                if (isReg) {
+                    const r = await this.req('register');
+                    if (r.error) document.getElementById('msg').innerText = r.error;
+                    else {
+                        alert('Kayıt Başarılı! ID: ' + r.id + '\nŞimdi giriş yapılıyor...');
+                        isReg = false; toggleMode();
+                        // Auto-login after reg
+                        this.login();
+                    }
+                } else {
+                    const r = await this.req('login');
+                    if (r.error) {
+                        document.getElementById('msg').innerText = r.error;
+                    }
+                    else {
+                        // Success -> Save & Load
+                        if (document.getElementById('remenber').checked) {
+                            localStorage.setItem('auro_u', USER);
+                            localStorage.setItem('auro_p', PASS);
+                        }
+                        // Merge backend data with defaults
+                        if (r.data) {
+                            STATE = { ...STATE, ...r.data };
+                            // Ensure installed array exists
+                            if (!STATE.installed || STATE.installed.length === 0) {
+                                STATE.installed = ['browser', 'ai_web', 'locker', 'graph', 'notes', 'search', 'files', 'store', 'settings'];
+                            }
+                        }
+                        this.enter();
+                    }
+                }
+            },
+            enter() {
+                // HARD REMOVE BOOT
+                const b = document.getElementById('boot');
+                b.style.display = 'none';
+
+                const a = document.getElementById('auth');
+                a.classList.remove('active');
+                setTimeout(() => a.style.display = 'none', 500);
+
+                document.getElementById('desktop').style.opacity = 1;
+                render();
+            },
+            save() {
+                if (!USER) return;
+                this.req('sync', { data: STATE });
+            }
+        };
+
+        /* --- BOOT --- */
+        window.onload = () => {
+            // FORCE UPDATE URL
+            localStorage.setItem('svr', SERVER_URL);
+
+            waveAnim();
+            setInterval(() => { const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); document.getElementById('clock').innerText = t; }, 1000);
+
+            // Auto-Fill
+            if (USER) document.getElementById('uUser').value = USER;
+            if (PASS) document.getElementById('uPass').value = PASS;
+
+            // CRITICAL FIX: DISPLAY NONE sequence
+            setTimeout(() => document.getElementById('boot').style.opacity = 0, 2000);
+            setTimeout(() => {
+                document.getElementById('boot').style.display = 'none';
+                document.getElementById('auth').classList.add('active');
+
+                // Auto Login Attempt if saved
+                if (USER && PASS) {
+                    setTimeout(() => cloud.login(), 500);
+                }
+            }, 2600);
+        };
+
+        /* --- UI RENDER --- */
+        function render() {
+            const g = document.getElementById('grid'); g.innerHTML = '';
+            const d = document.getElementById('dock'); d.innerHTML = '';
+            STATE.installed.forEach(k => {
+                const a = APPS[k]; if (!a) return;
+                g.innerHTML += `<div class="app" onclick="wm.open('${k}')"><div class="ico" style="color:${a.c}"><i data-lucide="${a.i}"></i></div><span style="font-size:0.8rem">${a.t}</span></div>`;
+                if (['browser', 'ai_web', 'files', 'search'].includes(k)) d.innerHTML += `<div class="d-btn" onclick="wm.open('${k}')"><i data-lucide="${a.i}" style="color:white"></i></div>`;
+            });
+            d.innerHTML += `<div class="d-btn" onclick="ui.toggleAI()"><i data-lucide="zap" style="color:var(--a)"></i></div>`;
+            lucide.createIcons();
+        }
+
+        const ui = { toggleAI() { const e = document.getElementById('ai'); e.style.display = e.style.display === 'flex' ? 'none' : 'flex'; } };
+
+        /* --- WINDOW MANAGER --- */
+        const wm = {
+            z: 100,
+            open(k) {
+                const a = APPS[k];
+                const id = 'w_' + Date.now();
+                const w = document.createElement('div'); w.id = id; w.className = 'win';
+
+                w.style.width = '350px'; w.style.height = '500px'; w.style.left = '20px'; w.style.top = '50px';
+                if (window.innerWidth > 768) { w.style.width = '800px'; w.style.height = '550px'; w.style.left = '100px'; w.style.top = '80px'; }
+
+                let c = '';
+                if (a.url) c = `<iframe src="${a.url}"></iframe><div class="blocker"></div>`;
+                else if (a.type === 'native_notes') c = this.getNotesApp();
+                else if (k === 'settings') c = this.getSettings();
+                else c = `<div style="padding:20px; color:#fff;"><h2>${a.t}</h2><p>Native App</p></div>`;
+
+                const pop = a.url ? `<div class="ctrl" onclick="window.open('${a.url}')"><i data-lucide="external-link" width="16"></i></div>` : '';
+
+                w.innerHTML = `
+                    <div class="head" onpointerdown="wm.down(event,'${id}','move')">
+                        <span style="font-weight:600">${a.t}</span>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            ${pop}
+                            <div class="ctrl close" onclick="wm.close('${id}')"><i data-lucide="x" width="16"></i></div>
+                        </div>
+                    </div>
+                    <div class="body">${c}</div>
+                    <div class="resizer" onpointerdown="wm.down(event,'${id}','size')"></div>
+                `;
+                document.body.appendChild(w);
+                setTimeout(() => w.classList.add('open'), 10);
+                this.top(id); lucide.createIcons();
+            },
+            close(id) { document.getElementById(id).remove(); },
+            top(id) {
+                const w = document.getElementById(id);
+                w.style.zIndex = ++this.z;
+                document.querySelectorAll('.win').forEach(x => x.classList.remove('active'));
+                w.classList.add('active');
+            },
+            down(e, id, mode) {
+                if (e.target.closest('.ctrl')) return;
+                if (e.button !== 0) return;
+                this.top(id);
+                this.mode = mode;
+                this.target = document.getElementById(id);
+                this.target.classList.add(mode === 'move' ? 'moving' : 'resizing');
+                this.rect = this.target.getBoundingClientRect();
+                this.start = { x: e.clientX, y: e.clientY };
+                this.target.setPointerCapture(e.pointerId);
+                this.target.onpointermove = (ev) => {
+                    const dx = ev.clientX - this.start.x; const dy = ev.clientY - this.start.y;
+                    if (this.mode === 'move') { this.target.style.left = (this.rect.left + dx) + 'px'; this.target.style.top = (this.rect.top + dy) + 'px'; }
+                    else { this.target.style.width = Math.max(300, this.rect.width + dx) + 'px'; this.target.style.height = Math.max(200, this.rect.height + dy) + 'px'; }
+                };
+                this.target.onpointerup = () => { this.target.classList.remove('moving', 'resizing'); this.target.onpointermove = null; this.target.onpointerup = null; };
+            },
+            getSettings() {
+                return `<div style="padding:20px;">
+                    <h2>Ayarlar</h2>
+                    <p><strong>Kullanıcı:</strong> ${USER}</p>
+                    <button onclick="cloud.save(); alert('Kaydedildi!')" style="padding:10px; background:var(--p); border:none; color:white; border-radius:8px;">Buluta Elle Kaydet</button>
+                    <br><br>
+                    <small>Veriler otomatik senkronize edilir.</small>
+                </div>`;
+            },
+            getNotesApp() {
+                return `<div style="display:flex; flex-direction:column; height:100%;">
+                    <div style="background:#222; padding:10px; font-size:0.8rem; color:#888;">Bu notlar Cloud'a (DataJSON) yedeklenir.</div>
+                    <textarea id="notePad" style="flex:1; background:#111; color:#fff; border:none; padding:15px; outline:none; resize:none;" oninput="STATE.notes_content=this.value; cloud.save();">${STATE.notes_content || ''}</textarea>
+                </div>`;
+            }
+        };
+
+        /* --- GRAPHICS --- */
+        function waveAnim() {
+            const c = document.getElementById('waves'); const x = c.getContext('2d');
+            let w, h, t = 0;
+            const res = () => { w = c.width = window.innerWidth; h = c.height = window.innerHeight; }; window.onresize = res; res();
+            const draw = () => {
+                x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
+                // MOUNTAIN EFFECT
+                for (let i = 0; i < 60; i++) {
+                    x.beginPath(); x.lineWidth = i < 10 ? 3 : 1;
+                    let yOver = (h / 2) + (i * 5) - 50;
+                    for (let j = 0; j < w; j += 20) {
+                        const dy = Math.sin(j * 0.005 + t + i * 0.1) * 50 + Math.sin(j * 0.02 + t) * 20;
+                        x.lineTo(j, yOver + dy);
+                    }
+                    x.strokeStyle = `hsla(${(t * 10 + i * 5) % 360}, 70%, 50%, 0.5)`; x.stroke();
+                }
+                t += 0.02; requestAnimationFrame(draw);
+            }; draw();
+        }
+
+        /* --- AI --- */
+        const ai = {
+            async send() {
+                const i = document.getElementById('aiIn'); const t = i.value; if (!t) return;
+                const c = document.getElementById('aiOut'); c.innerHTML += `<div style="text-align:right; margin:5px 0; background:#333; padding:10px; border-radius:12px; display:inline-block; margin-left:auto; max-width:80%;">${t}</div><div style="clear:both"></div>`; i.value = '';
+                try {
+                    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST', headers: { 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "system", content: "Aurora AI. Turkish." }, { role: "user", content: t }] })
+                    });
+                    const d = await r.json(); c.innerHTML += `<div style="text-align:left; margin:5px 0; color:#ddd; background:rgba(139,92,246,0.1); padding:10px; border-radius:12px; border:1px solid rgba(139,92,246,0.3); max-width:90%;">${marked.parse(d.choices[0].message.content)}</div>`;
+                } catch (e) { }
+            }
+        };
+    </script>
+</body>
+
+</html>
