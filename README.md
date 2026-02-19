@@ -53,5 +53,4 @@ This project is licensed under the **MIT License**. This ensures that your owner
 
 ---
 
-### 👨‍💻 Developer
-Developed with passion by **[Your Name/Username]**.
+
